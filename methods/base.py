@@ -12,7 +12,7 @@ from utils.losses import FocalLoss
 
 class Base(object):
     def __init__(self, args, seed):
-        self.multiple_gpus = list(range(len(args['device'].split(','))))
+        self._multiple_gpus = list(range(len(args['device'].split(','))))
         self.method = args['method']
         self.epochs = args['epochs']
         self.lrate = args['lrate']
