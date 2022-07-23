@@ -12,7 +12,7 @@
             // "program": "test.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            // "args": ["--config","options/finetune.yaml"]
+            // "args": ["--config","options/retrain.yaml"]
             "args": ["--config","options/balsupmoco.yaml"]
         }
     ]

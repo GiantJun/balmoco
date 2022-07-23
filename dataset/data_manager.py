@@ -43,6 +43,7 @@ def get_dataloader(dataset_name, batch_size=64, num_workers=8, img_size=100, ret
 
     dataset = get_data(dataset_name)
     dataset.download_data()
+    class_num = dataset.class_num
     
     if ret_valid:
         if isinstance(dataset.train_dataset, ConcatDataset):
@@ -65,7 +66,7 @@ def get_dataloader(dataset_name, batch_size=64, num_workers=8, img_size=100, ret
         test_dataloader = DataLoader(dataset.test_dataset, batch_size=batch_size, num_workers=num_workers)
         valid_dataloader = None
 
-    return {'train':train_dataloader, 'valid':valid_dataloader, 'test':test_dataloader}
+    return {'train':train_dataloader, 'valid':valid_dataloader, 'test':test_dataloader}, class_num
 
 
 def get_data(dataset_name):
@@ -128,8 +129,10 @@ class iData(object):
     test_trsf = []
     common_trsf = []
     class_order = None
+    class_num = None
 
 class BA_nonBA(iData):
+    class_num = 2
     global img_size_global
     train_trsf = transforms.Compose([
                     transforms.RandomApply([
@@ -162,8 +165,8 @@ class BA_nonBA(iData):
         logging.info('applying img size {}'.format(img_size_global))
         self.train_dataset = DLDataset(train_csv_dir, transform=self.train_trsf)
         self.test_dataset = DLDataset(test_csv_dir, transform=self.test_trsf)
-        logging.info('train_dataset: {}'.format(self.train_dataset))
-        logging.info('test_dataset: {}'.format(self.test_dataset))
+        logging.info('train_dataset: {}'.format(train_csv_dir))
+        logging.info('test_dataset: {}'.format(test_csv_dir))
 
 class TwoView_BA_nonBA(BA_nonBA):
     def download_data(self):
@@ -198,6 +201,21 @@ class Bal_BA_nonBA_all(BA_nonBA):
         test_dataset.append(DLDataset(test_csv_dir, transform=self.test_trsf))
 
         test_csv_dir = join(environ["DLDATASET_TEST"], 'MobilePhone_test_dataset/doctorF/label.csv')
+        test_dataset.append(DLDataset(test_csv_dir, transform=self.test_trsf))
+
+        test_csv_dir = join(environ["DLDATASET_TEST2"], 'MobilePhone_test_dataset/doctorA/label.csv')
+        test_dataset.append(DLDataset(test_csv_dir, transform=self.test_trsf))
+
+        test_csv_dir = join(environ["DLDATASET_TEST2"], 'MobilePhone_test_dataset/doctorB/label.csv')
+        test_dataset.append(DLDataset(test_csv_dir, transform=self.test_trsf))
+
+        test_csv_dir = join(environ["DLDATASET_TEST2"], 'MobilePhone_test_dataset/doctorC/label.csv')
+        test_dataset.append(DLDataset(test_csv_dir, transform=self.test_trsf))
+
+        test_csv_dir = join(environ["DLDATASET_TEST2"], 'MobilePhone_test_dataset/doctorF/label.csv')
+        test_dataset.append(DLDataset(test_csv_dir, transform=self.test_trsf))
+
+        test_csv_dir = join(environ["DLDATASET_TEST2"], 'MobilePhone_test_dataset/doctorG/label.csv')
         test_dataset.append(DLDataset(test_csv_dir, transform=self.test_trsf))
 
         self.test_dataset = ConcatDataset(test_dataset)

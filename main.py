@@ -57,9 +57,10 @@ if __name__ == '__main__':
     tblog = set_logger(args)
     try:
         # 准备数据集
-        data_loaders = get_dataloader(args['dataset'], batch_size=args['batch_size'], num_workers=args['num_workers'], 
+        data_loaders, class_num = get_dataloader(args['dataset'], batch_size=args['batch_size'], num_workers=args['num_workers'], 
                         img_size=args['img_size'], ret_valid=args['ret_valid'])
-
+        args.update({'class_num':class_num})
+        
         for seed in args['seed']:
             print_args(args, seed)
             set_random(seed)

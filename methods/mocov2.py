@@ -4,6 +4,9 @@ from methods.base import Base
 import torchvision.models as models
 from torch import nn
 from tqdm import tqdm
+from os.path import join
+import logging
+import torch
 
 class MoCoV2(Base):
     def __init__(self, args, seed):
@@ -39,11 +42,17 @@ class MoCoV2(Base):
     def compute_accuracy(self, model, loader):
         return None
 
-    def after_train(self, dataloader, tblog=None):
-        if isinstance(self.network, nn.DataParallel):
-            self.network = self.network.module
-        if self.save_models:
-            self.save_checkpoint(self.network.cpu().encoder_q, 'moco_encoder_q')
+    def save_checkpoint(self, filename, model=None, state_dict=None):
+        save_path = join(self.save_dir, filename+'.pkl')
+        if state_dict != None:
+            save_dict = state_dict
+        else:
+            save_dict = model.encoder_q.state_dict()
+        torch.save({
+            'state_dict': save_dict,
+            'backbone': self.backbone
+            }, save_path)
+        logging.info('model state dict saved at: {}'.format(save_path))
 
 
         

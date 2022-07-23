@@ -1,40 +1,55 @@
-from torch import nn
-from methods.base import Base
-import logging
-from backbones.network import get_model
-import torch
+from backbones.bal_sup_moco_fc_netV2 import BalSupMoCoFCNet
 from tqdm import tqdm
+import torchvision.models as models
+from torch import nn
+import logging
 from torch.nn.functional import softmax
 from utils.toolkit import plot_confusion_matrix, plot_ROC_curve
+from methods.mocov2 import MoCoV2
+import torch
+from os.path import join
+import numpy as np
 
-class Finetune(Base):
+class BalSupMoCo_FC(MoCoV2):
     def __init__(self, args, seed):
         super().__init__(args, seed)
-        self.backbone = args['backbone']
-        self.network = get_model(args['backbone'], args['pretrained'], args['pretrain_path'])
-
-        dim_mlp = self.network.fc.in_features
-        self.network.fc = nn.Linear(dim_mlp, args['class_num'])
-        if 'nlp_num' in args:
-            if args['nlp_num'] > 0:
-                mlp_list = [nn.Linear(dim_mlp, dim_mlp), nn.ReLU()]
-                for i in range(args['nlp_num']-1):
-                    mlp_list.append(nn.Linear(dim_mlp, dim_mlp))
-                    mlp_list.append(nn.ReLU())
-                mlp_list.append(self.network.fc)
-                self.network.fc = nn.Sequential(*mlp_list)
-
-        if self.freeze:
-            for name, param in self.network.named_parameters():
-                if not 'fc' in name:
-                    param.requires_grad = False
-                logging.info("{} require grad={}".format(name, param.requires_grad))
+        self.network = BalSupMoCoFCNet(models.__dict__[args['backbone']], K=args['K'], m=args['m'], T=args['T'], mlp=True)
+        self.gamma = args['gamma']
 
         self.network = self.network.cuda()
         if len(self.multiple_gpus) > 1:
             self.network = nn.DataParallel(self.network, self.multiple_gpus)
-            
     
+    def epoch_train(self, dataloader, optimizer, scheduler):
+        statistic_ce = 0.
+        statistic_contrast = 0.
+
+        self.network.train()
+        losses = 0.
+        with tqdm(total=len(dataloader), ncols=150) as prog_bar:
+            for inputs, targets in dataloader:
+                inputs[0], inputs[1], targets = inputs[0].cuda(), inputs[1].cuda(), targets.cuda()
+                contrast_loss = self.network.comput_supcontrast_loss(inputs[0], inputs[1], targets).mean()
+                ce_loss = self.criterion(self.network(inputs[0]), targets)
+                loss = (1-self.gamma)*contrast_loss + self.gamma*ce_loss
+                
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                losses += loss.item()
+
+                statistic_ce += ce_loss.item()
+                statistic_contrast += contrast_loss.item()
+
+                prog_bar.update(1)
+
+        scheduler.step()
+
+        train_loss = losses/len(dataloader)
+        logging.info('ce loss: {} , contrastive loss: {} , all: {}'.format(statistic_ce/len(dataloader),statistic_contrast/len(dataloader), train_loss))
+
+        return None, train_loss
+
     def after_train(self, dataloaders, tblog=None):
         # valid
         if not dataloaders['valid'] is None:
@@ -98,7 +113,22 @@ class Finetune(Base):
                     _tqdm.update(1)
         
         return all_preds, all_labels, all_scores
+
+    
+    def save_checkpoint(self, filename, model=None, state_dict=None):
+        save_path = join(self.save_dir, filename+'.pkl')
+        # if state_dict != None:
+        #     save_dict = state_dict
+        # else:
+        #     save_dict = model.encoder_q.state_dict()
+        torch.save(model, save_path)
+        logging.info('model state dict saved at: {}'.format(save_path))
+
+
+        
+        
         
         
 
-            
+        
+

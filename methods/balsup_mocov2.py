@@ -1,4 +1,4 @@
-from backbones.bal_sup_moco_net import BalSupMoCoNet
+from backbones.bal_sup_moco_netV2 import BalSupMoCoNet
 from tqdm import tqdm
 import torchvision.models as models
 from torch import nn

@@ -12,7 +12,7 @@ from utils.losses import FocalLoss
 
 class Base(object):
     def __init__(self, args, seed):
-        self._multiple_gpus = list(range(len(args['device'].split(','))))
+        self.multiple_gpus = list(range(len(args['device'].split(','))))
         self.method = args['method']
         self.epochs = args['epochs']
         self.lrate = args['lrate']
@@ -100,6 +100,14 @@ class Base(object):
                 epoch+1, self.epochs, train_loss, train_acc, test_acc)
                 
             logging.info(info)
+
+            if self.save_models and (epoch % 100 == 0 or epoch==self.epochs-1):
+                if dataloaders['valid'] != None and not ('moco' in self.method):
+                    self.save_checkpoint('model_dict_{}'.format(epoch+1), state_dict=best_model_wts)
+                    logging.info('save model dict from best valid model')
+                else:
+                    self.save_checkpoint('model_dict_{}'.format(epoch), copy.deepcopy(self.network).cpu())
+                    logging.info('save model dict from current model')
             
         if dataloaders['valid'] != None and not ('mocov2' in self.method):
             logging.info('Best model was selected in epoch {} with valid acc={}'.format(best_epoch, best_valid))
@@ -151,18 +159,19 @@ class Base(object):
 
     
     def after_train(self, dataloader, tblog=None):
-        if self.save_models:
-            self.save_checkpoint(self.network.cpu(), 'model_dict')
-
         test_acc = self.compute_accuracy(self.network, dataloader['test'])
         logging.info('Evaluate test set result: acc={}'.format(test_acc))
 
         
-    def save_checkpoint(self, model, filename):
+    def save_checkpoint(self, filename, model=None, state_dict=None):
         save_path = join(self.save_dir, filename+'.pkl')
+        if state_dict != None:
+            save_dict = state_dict
+        else:
+            save_dict = model.state_dict()
         torch.save({
-            'state_dict': model.state_dict(),
+            'state_dict': save_dict,
             'backbone': self.backbone
             }, save_path)
-        logging.info('model state dict saved at: {}'.format('{}'.format(save_path)))
+        logging.info('model state dict saved at: {}'.format(save_path))
 

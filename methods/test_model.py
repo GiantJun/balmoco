@@ -51,8 +51,6 @@ class TestModel(Base):
         logging.info('===== Evaluate test set result ======')
         logging.info('acc = {:.4f} , auc = {:.4f} , precision = {:.4f} , recall = {:.4f} , specificity = {:.4f}'.format(acc, roc_auc, precision, recall, specificity))
 
-        if self.save_models:
-            self.save_checkpoint(self.network.cpu(), 'model_dict')
 
     def get_output(self, dataloader):
         self.network.eval()

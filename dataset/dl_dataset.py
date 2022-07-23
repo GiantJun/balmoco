@@ -20,8 +20,19 @@ class DLDataset(Dataset):
         self.class_num=2
         self.class_names=['non-BA','BA']
 
-        self.data = data_frame['Image_name:'].to_list()
+        data_path = data_frame['Image_name:'].to_list()
         self.targets = data_frame['Label:'].to_list()
+
+        self.data = []
+        for item in data_path:
+            img_path = join(self.data_dir, item)
+            if not exists(img_path):
+                name, suffix = item.split('.')
+                img_path = join(self.data_dir, name+'.'+suffix.lower())
+            if exists(img_path):
+                self.data.append(img_path)
+            else:
+                print('file {} do not exist!'.format(img_path))
     
     def get_XY(self):
         return self.data, self.targets
@@ -36,11 +47,8 @@ class DLDataset(Dataset):
 
     def __getitem__(self, idx):
         """根据 idx 从 图片名字-类别 列表中获取相应的 image 和 label"""
-        img_path = join(self.data_dir, self.data[idx])
-        if not exists(img_path):
-            name, suffix = self.data[idx].split('.')
-            img_path = join(self.data_dir, name+'.'+suffix.lower())
-        image = Image.open(img_path)
+        
+        image = Image.open(self.data[idx])
         target = self.targets[idx]
 
         return self.transform(image), target

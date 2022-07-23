@@ -37,7 +37,6 @@ class MoCoNet(nn.Module):
 
         # create the queue
         self.register_buffer("queue", torch.randn(dim, K))
-        self.register_buffer("queue_label", torch.ones(K, dtype=torch.int))
         self.queue = nn.functional.normalize(self.queue, dim=0)
 
         self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
@@ -51,7 +50,7 @@ class MoCoNet(nn.Module):
             param_k.data = param_k.data * self.m + param_q.data * (1. - self.m)
 
     @torch.no_grad()
-    def _dequeue_and_enqueue(self, keys, targets):
+    def _dequeue_and_enqueue(self, keys):
 
         batch_size = keys.shape[0]
 
@@ -60,7 +59,6 @@ class MoCoNet(nn.Module):
 
         # replace the keys at ptr (dequeue and enqueue)
         self.queue[:, ptr:ptr + batch_size] = keys.T
-        self.queue_label[ptr:ptr+batch_size] = targets
         ptr = (ptr + batch_size) % self.K  # move pointer
 
         self.queue_ptr[0] = ptr
@@ -103,7 +101,7 @@ class MoCoNet(nn.Module):
         labels = torch.zeros(logits.shape[0], dtype=torch.long).cuda()
 
         # dequeue and enqueue
-        self._dequeue_and_enqueue(k, targets)
+        self._dequeue_and_enqueue(k)
 
         return logits, labels
 
